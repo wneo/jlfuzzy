@@ -4,6 +4,7 @@ import (
 	"github.com/wneo/levenshtein/levenshtein"
 	"log"
 	"sort"
+	"strings"
 )
 
 var levenshteinOption levenshtein.Options
@@ -11,9 +12,9 @@ var levenshteinOption levenshtein.Options
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ltime)
 	levenshteinOption = levenshtein.DefaultOptions
-	levenshteinOption.DelCost = 7
-	levenshteinOption.InsCost = 3
-	levenshteinOption.SubCost = 5
+	levenshteinOption.DelCost = 1
+	levenshteinOption.InsCost = 1
+	levenshteinOption.SubCost = 1
 
 }
 
@@ -34,6 +35,11 @@ func NewJLFuzzy() *JLFuzzy {
 		mapWordToRecord: make(map[string]*WordRecord, 1000),
 	}
 }
+func (j *JLFuzzy) SetConfig(delCost, insCost, subCost int) {
+	levenshteinOption.DelCost = delCost
+	levenshteinOption.InsCost = insCost
+	levenshteinOption.SubCost = subCost
+}
 
 func (j *JLFuzzy) RemoveWords(words []string) {
 	for _, word := range words {
@@ -44,6 +50,7 @@ func (j *JLFuzzy) RemoveWord(word string) {
 	if len(word) == 0 {
 		return
 	}
+	word = strings.ToLower(word)
 	if record, ok := j.mapWordToRecord[word]; ok {
 		delete(j.mapWordToRecord, word)
 		for r, c := range record.mapRuneToCount {
@@ -62,6 +69,7 @@ func (j *JLFuzzy) AddWord(word string) {
 	if len(word) == 0 {
 		return
 	}
+	word = strings.ToLower(word)
 	if _, ok := j.mapWordToRecord[word]; ok {
 		return
 	}
@@ -106,7 +114,8 @@ func (j *JLFuzzy) analysisWorld(word string) *WordRecord {
 //				 0: dont allow add;
 //				>0: allow count;
 // maxCount: max count for results.	(>0)
-func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int) (result []string) {
+// maxScore: max score for Levenshtein.	(>0)
+func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, maxScore int) (result []string) {
 	result = []string{}
 	if len(word) == 0 {
 		return
@@ -212,6 +221,10 @@ func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int) (res
 	caches := make(map[int][]string)
 	for str, _ := range mapHitLack {
 		score := levenshtein.DistanceForStrings([]rune(word), []rune(str), levenshteinOption)
+		if maxScore > 0 && score > maxScore {
+			delete(mapHitLack, str)
+			continue
+		}
 		if _, ok := caches[score]; !ok {
 			caches[score] = []string{str}
 			scores = append(scores, score)

@@ -1,5 +1,25 @@
 # jlfuzzy
-fast fuzzy with Levenshtein
+fast fuzzy with Levenshtein(ignore case, support unicode)
+
+apis:
+
+1. new model -> can save
+	
+	NewJLFuzzy()
+
+2. add words  -> can call any time
+	
+	func (j *JLFuzzy) AddWords(words []string) 
+	func (j *JLFuzzy) AddWord(word string) 
+
+3. remove words  -> can call any time
+	
+	func (j *JLFuzzy) RemoveWords(words []string)
+	func (j *JLFuzzy) RemoveWord(word string)
+
+4. config Levenshtein  -> can call any time to update
+	
+	func (j *JLFuzzy) SetConfig(delCost, insCost, subCost int)
 
 
 search args:
@@ -21,6 +41,8 @@ search args:
 	
 	// maxCount: max count for results.	(>0)
 
+	// maxScore: max score for Levenshtein.	(>0)
+
 usage:
 
     // 1. create fuzzy module (can save for cache)
@@ -28,5 +50,5 @@ usage:
     // 2. add words to train
     fuzzy.AddWords([]string{"a", "abc", "abcd", "aaa", "aaabbb", "ccaa", "bcd", "bdc", "bcdddd"})
     // 3. search
-    result := fuzzy.SearchWord("bdc", 1, -1, 0)
+    result := fuzzy.SearchWord("bdc", 1, -1, 0, 100)
     log.Println(result)
