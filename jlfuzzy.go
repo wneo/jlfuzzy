@@ -35,6 +35,23 @@ func NewJLFuzzy() *JLFuzzy {
 	}
 }
 
+func (j *JLFuzzy) RemoveWords(words []string) {
+	for _, word := range words {
+		j.RemoveWord(word)
+	}
+}
+func (j *JLFuzzy) RemoveWord(word string) {
+	if len(word) == 0 {
+		return
+	}
+	if record, ok := j.mapWordToRecord[word]; ok {
+		delete(j.mapWordToRecord, word)
+		for r, c := range record.mapRuneToCount {
+			delete(j.mapRunesToCount[r][c], word)
+		}
+	}
+}
+
 func (j *JLFuzzy) AddWords(words []string) {
 	for _, word := range words {
 		j.AddWord(word)
