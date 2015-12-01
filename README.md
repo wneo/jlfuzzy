@@ -1,28 +1,28 @@
 # jlfuzzy
-fast fuzzy with Levenshtein(ignore case, support unicode)
+##fast fuzzy with Levenshtein(ignore case, support unicode)
 
-apis:
+###apis:
 
-1. new model -> can save
-	
+#####1. new model -> can save
+
 	NewJLFuzzy()
 
-2. add words  -> can call any time
+#####2. add words  -> can call any time
 	
 	func (j *JLFuzzy) AddWords(words []string) 
 	func (j *JLFuzzy) AddWord(word string) 
 
-3. remove words  -> can call any time
+#####3. remove words  -> can call any time
 	
 	func (j *JLFuzzy) RemoveWords(words []string)
 	func (j *JLFuzzy) RemoveWord(word string)
 
-4. config Levenshtein  -> can call any time to update
+#####4. config Levenshtein  -> can call any time to update
 	
 	func (j *JLFuzzy) SetConfig(delCost, insCost, subCost int)
 
 
-search args:
+###search args:
 
 	// word: the word to search
 
@@ -43,7 +43,7 @@ search args:
 
 	// maxScore: max score for Levenshtein.	(>0)
 
-usage:
+###usage:
 
     // 1. create fuzzy module (can save for cache)
     fuzzy := NewJLFuzzy()
