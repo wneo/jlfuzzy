@@ -12,7 +12,7 @@
 ##### 1. new model -> can save
 
 ```go
-NewJLFuzzy()
+NewJLFuzzy() *JLFuzzy
 ```
 
 ##### 2. add words  -> can call any time
