@@ -10,7 +10,7 @@ func BenchmarkTest(b *testing.B) {
 		f := NewJLFuzzy()
 		f.AddWords([]string{"a", "abc", "abcd", "aaa", "aaabbb", "ccaa", "bcd", "bdc", "bcdddd"})
 
-		re := f.SearchWord("bdc", 1, -1, 0)
+		re := f.SearchWord("bdc", 1, -1, 0, 0)
 		log.Println(re)
 	}
 }
@@ -25,8 +25,8 @@ var testCases = []struct {
 	result  []string
 }{
 	{"", 0xFFFF, -1, 0, sources, []string{}},
-	{"abc", 1, -1, 0, sources, []string{"abc", "abcd", "bdc", "bcdd", "aaabbb", "ccaa", "bcdddd"}},
-	{"abc", 1, -1, 2, sources, []string{"abc", "abcd"}},
+	{"abc", 1, -1, 0, sources, []string{"abc", "abcd"}},
+	{"abc", 1, -1, 1, sources, []string{"abc"}},
 	{"aaa", 0, 0, 0, sources, []string{"aaa"}},
 	{"a", 0, 1, 0, sources, []string{"a"}},
 	{"aaabbb", 2, -1, 0, sources, []string{"aaabbb"}},
@@ -36,7 +36,7 @@ func TestSearchString(t *testing.T) {
 	for _, testCase := range testCases {
 		f := NewJLFuzzy()
 		f.AddWords(testCase.sources)
-		result := f.SearchWord(testCase.target, testCase.lack, testCase.more, testCase.max)
+		result := f.SearchWord(testCase.target, testCase.lack, testCase.more, testCase.max, 0.6)
 		//t.Log(result, testCase.result)
 		//t.Fail()
 		if testEq(result, testCase.result) == false {

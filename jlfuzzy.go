@@ -1,21 +1,15 @@
 package jlfuzzy
 
 import (
-	"github.com/wneo/levenshtein/levenshtein"
+	"github.com/wneo/goTextDistance"
 	"log"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
-
-var levenshteinOption levenshtein.Options
 
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ltime)
-	levenshteinOption = levenshtein.DefaultOptions
-	levenshteinOption.DelCost = 1
-	levenshteinOption.InsCost = 1
-	levenshteinOption.SubCost = 1
-
 }
 
 type WordRecord struct {
@@ -24,21 +18,28 @@ type WordRecord struct {
 	TotolCount     int          // all rune count
 }
 
+const (
+	AlgorithmLevenshtein        = iota // Levenshtein distance (Default)
+	AlgorithmDamerauLevenshtein        // Damerau-Levenshtein distance
+	AlgorithmJaro                      // Jaro distance
+	AlgorithmJaroWinkler               // Jaro-Winkler distance
+)
+
 type JLFuzzy struct {
 	mapRunesToCount map[rune]map[int]map[string]*WordRecord
 	mapWordToRecord map[string]*WordRecord
+
+	Algorithm int
+	EnableLog bool
 }
 
 func NewJLFuzzy() *JLFuzzy {
 	return &JLFuzzy{
 		mapRunesToCount: make(map[rune]map[int]map[string]*WordRecord, 100),
 		mapWordToRecord: make(map[string]*WordRecord, 1000),
+
+		Algorithm: AlgorithmLevenshtein,
 	}
-}
-func (j *JLFuzzy) SetConfig(delCost, insCost, subCost int) {
-	levenshteinOption.DelCost = delCost
-	levenshteinOption.InsCost = insCost
-	levenshteinOption.SubCost = subCost
 }
 
 func (j *JLFuzzy) RemoveWords(words []string) {
@@ -114,8 +115,8 @@ func (j *JLFuzzy) analysisWorld(word string) *WordRecord {
 //				 0: dont allow add;
 //				>0: allow count;
 // maxCount: max count for results.	(>0)
-// maxScore: max score for Levenshtein.	(>0)
-func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, maxScore int) (result []string) {
+// minScore: min score for Distance.	(0 ~ 1) 0=all
+func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, minScore float64) (result []string) {
 	result = []string{}
 	if len(word) == 0 {
 		return
@@ -203,7 +204,7 @@ func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, maxS
 		tmpMapCache := make(map[int]string, len(mapHitLack))
 		for str, l := range mapHitLack {
 			record := j.mapWordToRecord[str]
-			v := l*levenshteinOption.DelCost + (record.TotolCount+l-orgRecord.TotolCount)*levenshteinOption.InsCost
+			v := l + (record.TotolCount + l - orgRecord.TotolCount)
 			tmpCacheL = append(tmpCacheL, v)
 			tmpMapCache[v] = str
 		}
@@ -217,11 +218,25 @@ func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, maxS
 	}
 
 	// 4. Jaro–Winkler / Levenshtein distance to order
-	scores := make([]int, 0, len(mapHitLack))
-	caches := make(map[int][]string)
+	scores := make([]float64, 0, len(mapHitLack))
+	caches := make(map[float64][]string)
 	for str, _ := range mapHitLack {
-		score := levenshtein.DistanceForStrings([]rune(word), []rune(str), levenshteinOption)
-		if maxScore > 0 && score > maxScore {
+
+		var score float64
+		switch j.Algorithm {
+		case AlgorithmLevenshtein:
+			distance := textdistance.LevenshteinDistance(word, str)
+			score = 1 - float64(distance)/float64(Max(utf8.RuneCountInString(word), utf8.RuneCountInString(str)))
+		case AlgorithmDamerauLevenshtein:
+			distance := textdistance.DamerauLevenshteinDistance(word, str)
+			score = 1 - float64(distance)/float64(Max(utf8.RuneCountInString(word), utf8.RuneCountInString(str)))
+		case AlgorithmJaro:
+			score, _ = textdistance.JaroDistance(word, str)
+		case AlgorithmJaroWinkler:
+			score = textdistance.JaroWinklerDistance(word, str)
+		}
+
+		if minScore < 1 && minScore > 0 && score < minScore {
 			delete(mapHitLack, str)
 			continue
 		}
@@ -232,15 +247,33 @@ func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, maxS
 			caches[score] = append(caches[score], str)
 		}
 	}
-	sort.Sort(sort.IntSlice(scores))
-	//log.Println("scores:", scores)
+	sort.Sort(sort.Reverse(sort.Float64Slice(scores)))
+
 	result = make([]string, 0, len(mapHitLack))
 	for _, score := range scores {
 		result = append(result, caches[score]...)
 	}
+
+	if j.EnableLog {
+		log.Println("scores:", scores)
+		log.Println("result:", result)
+	}
+
 	if maxCount > 0 && len(result) > maxCount {
 		result = result[:maxCount]
 	}
+
 	return
 
+}
+
+// Max returns the maximum number of passed int slices.
+func Max(is ...int) int {
+	var max int
+	for _, v := range is {
+		if max < v {
+			max = v
+		}
+	}
+	return max
 }
