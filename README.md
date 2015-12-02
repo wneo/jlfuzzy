@@ -68,6 +68,7 @@ func (j *JLFuzzy) SearchWord(word string, lack int, more int, maxCount int, minS
 ### How to Use:
 
 ```bash
+go get github.com/wneo/goTextDistance
 go get github.com/wneo/jlfuzzy
 ```
 
